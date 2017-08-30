@@ -1,0 +1,31 @@
+{
+    "name": "helori/laravel-blog",
+    "description": "Blog for Laravel",
+    "keywords": ["laravel", "blog"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Helori Lanos",
+            "email": "helori@algoart.fr",
+            "homepage": "https://algoart.fr"
+        }
+    ],
+    "repositories": [
+        {
+            "type": "git",
+            "url": "https://github.com/helori/laravel-blog.git"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Helori\\LaravelBlog\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=5.5.9",
+        "doctrine/dbal": "^2.5"
+    },
+    "require-dev": {
+        
+    }
+}
