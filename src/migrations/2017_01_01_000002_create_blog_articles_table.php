@@ -14,6 +14,8 @@ class CreateBlogArticlesTable extends Migration
 
             $table->string('title')->nullable()->default(null);
             $table->string('slug')->nullable()->default(null);
+            $table->string('author')->nullable()->default(null);
+            $table->date('date')->nullable()->default(null);
             $table->boolean('published')->default(false);
             $table->text('preview')->nullable();
             $table->text('content')->nullable();
