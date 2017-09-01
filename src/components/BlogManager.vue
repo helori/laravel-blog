@@ -1,8 +1,13 @@
 <style scoped>
 h1{
+    margin: 0 0 5px 0;
     font-size: 30px;
     font-weight: 300;
-    margin: 0 0 5px 0;
+}
+h3{
+    margin: 30px 0 15px 0;
+    font-size: 20px;
+    font-weight: 300;
 }
 .subtitle{
     font-size: 16px;
@@ -10,9 +15,49 @@ h1{
     font-style: italic;
     margin: 0 0 15px 0;   
 }
+.col-left .btn-block, .col-left .alert{
+    margin: 0 0 15px 0;
+}
 .search-bar, .btn-back{
     margin: 15px 0;
 }    
+.badge-danger{
+    background: red;
+}
+.badge-danger a, .badge-danger a:hover{
+    color: white;
+    text-decoration: none;
+}
+.cell-thumb{
+    width: 150px;
+}
+.title{
+    font-weight: bold;
+}
+.date{
+    font-size: 12px;
+    color: #888;
+}
+.categories{
+    font-size: 12px;
+}
+.cell-pin{
+    width: 30px;
+}
+.pin{
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+}
+.pin.green{
+    background: green;
+}
+.pin.red{
+    background: red;
+}
+td .badge{
+    margin-right: 4px;
+}
 </style>
 
 <template>
@@ -20,59 +65,318 @@ h1{
     <div>
 
         <div class="row">
-            <div class="col-md-3">
+            <div class="col-md-3 col-left">
                 
-                <h1>Blog manager</h1>
+                <div v-if="updateItem === null">
 
-                <div class="subtitle">
-                    <span v-if="loaded && pagination.total > 0">
-                        {{ (pagination.current_page - 1) * pagination.per_page + 1 }}
-                        à {{ Math.min(pagination.current_page * pagination.per_page, pagination.total) }} sur {{ pagination.total }}
-                    </span>
-                    <span v-else-if="loaded && pagination.total == 0">
-                        No result
-                    </span>
-                    <span v-else>
-                        Loading...
-                    </span>
+                    <h1>Blog manager</h1>
+
+                    <div class="subtitle">
+                        <span v-if="readStatus === 'loading'">
+                            Loading...
+                        </span>
+                        <span v-else-if="readStatus === 'success' && pagination.total === 0">
+                            No result
+                        </span>
+                        <span v-else-if="readStatus === 'success'">
+                            {{ (pagination.current_page - 1) * pagination.per_page + 1 }}
+                            à {{ Math.min(pagination.current_page * pagination.per_page, pagination.total) }} sur {{ pagination.total }}
+                        </span>
+                        <span v-else-if="readStatus === 'error'">
+                            Something wrong happened...
+                        </span>
+                    </div>
+
+                    <div class="alert alert-danger" v-if="readErrors">
+                        {{ readErrors }}
+                    </div>
+
+                    <button type="button" class="btn btn-primary btn-block" @click="openCreate">
+                        <i class="fa fa-plus"></i> New article...
+                    </button>
+
+                    <div class="search-bar">
+                        <input-text
+                            v-model="search.text"
+                            name="search"
+                            placeholder="Search articles..."
+                            :autofocus="true">
+                        </input-text>
+                    </div>
+
+                    <ul class="list-group">
+                        <li v-for="category in categories" 
+                            class="list-group-item noselect" 
+                            @click="toggleCategory(category.id)">
+
+                            <span class="badge badge-danger" @click="$event.stopPropagation(); openCategoryDestroy(category)">
+                                <i class="fa fa-trash"></i>
+                            </span>
+
+                            <span class="badge" @click="$event.stopPropagation(); openCategoryUpdate(category)">
+                                <i class="fa fa-edit"></i>
+                            </span>
+
+                            <span class="badge" v-if="category.articles">{{ category.articles.length }}</span>
+                            
+                            <i class="fa" :class="{'fa-check-square-o': hasCategory(category.id), 'fa-square-o': !hasCategory(category.id)}"></i> {{ category.title }}
+                        </li>
+                    </ul>
+
+                    <button type="button" class="btn btn-primary btn-block" @click="openCategoryCreate">
+                        <i class="fa fa-plus"></i> New category...
+                    </button>
+
                 </div>
 
-                <button type="button" class="btn btn-primary btn-block" @click="openCreate">
-                    <i class="fa fa-plus"></i> New article...
-                </button>
+                <div v-else>
 
-                <div class="search-bar">
-                    <input-text
-                        v-model="search.text"
-                        name="search"
-                        placeholder="Search..."
-                        :autofocus="true">
-                    </input-text>
+                    <h1>Edit article</h1>
+
+                    <div class="subtitle">
+
+                    </div>
+
+                    <button type="button" class="btn btn-default btn-block" @click="openUpdate(null)">
+                        <i class="fa fa-arrow-left"></i> Back to list
+                    </button>
+
+                    <button type="button" 
+                        class="btn btn-primary btn-block"
+                        @click="update"
+                        :disabled="updateStatus === 'loading'">
+                        <i class="fa fa-spinner fa-spin" v-if="updateStatus === 'loading'"></i> Save modifications
+                    </button>
+
+                    <div class="alert alert-danger" v-if="updateErrors">
+                        {{ updateErrors }}
+                    </div>
+
+                    <div class="alert alert-success text-center" v-if="updateStatus === 'success'">
+                        <i class="fa fa-smile-o"></i> Modifications saved !
+                    </div>
+
+                    <h3>Belongs to categories :</h3>
+
+                    <ul class="list-group">
+                        <li v-for="category in categories" 
+                            class="list-group-item noselect" 
+                            @click="toggleCategoryForArticle(category)">
+
+                            <i class="fa" :class="{'fa-check-square-o': articleHasCategory(category), 'fa-square-o': !articleHasCategory(category)}"></i> {{ category.title }}
+                        </li>
+                    </ul>
+
                 </div>
 
             </div>
 
             <div class="col-md-9">
 
-                
+                <panel v-if="updateItem === null">
+                    <div slot="body">
+
+                        <div class="text-right">
+                            <pagination :pagination="pagination" @change="loadPage"></pagination>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-condensed table-striped">
+                                <tbody>
+                                    <tr v-for="(item, idx) in pagination.data">
+                                        <td class="cell-pin">
+                                            <div class="pin" :class="{'green': item.published, 'red': !item.published}"></div>
+                                        </td>
+                                        <td class="cell-thumb">
+                                            <media-thumb
+                                                :media="item.image[0]">
+                                            </media-thumb>
+                                        </td>
+                                        <td>
+                                            <div class="title">{{ item.title }}</div>
+                                            <div class="date">{{ item.published_at | date }}</div>
+                                            <div class="categories">
+                                                <span v-for="category in item.categories" class="badge">
+                                                    {{ category.title }}
+                                                </span>
+                                            </div>
+
+                                        </td>
+                                        <td class="text-right">
+
+                                            <div class="btn-group">
+
+                                                <button type="button" @click="openUpdate(item)" class="btn btn-default">
+                                                    <i class="fa fa-edit"></i>
+                                                </button>
+
+                                                <button type="button" @click="openDestroy(item)" class="btn btn-danger">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                                
+                                            </div>
+                                            
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </panel>
+
+                <panel v-else>
+                    <div slot="body">
+
+                        <article-form-update
+                            ref="updateForm"
+                            :item-org="updateItem"
+                            :errors-org="updateErrors">
+                        </article-form-update>
+
+                    </div>
+                </panel>
 
             </div>
         </div>
+
+        <!-- Categories dialogs -->
+
+        <dialog-edit
+            ref="createCategoryDialog"
+            title="Create a new category"
+            :status="createCategoryStatus"
+            @save="createCategory">
+
+            <div slot="body">
+                <category-form
+                    ref="createCategoryForm"
+                    :item-org="createCategoryItem"
+                    :errors-org="createCategoryErrors">
+                </category-form>
+            </div>
+
+        </dialog-edit>
+
+        <dialog-edit
+            ref="updateCategoryDialog"
+            title="Update category"
+            :status="updateCategoryStatus"
+            @save="updateCategory">
+
+            <div slot="body">
+                <category-form
+                    ref="updateCategoryForm"
+                    :item-org="updateCategoryItem"
+                    :errors-org="updateCategoryErrors">
+                </category-form>
+            </div>
+
+        </dialog-edit>
+
+        <dialog-destroy
+            ref="destroyCategoryDialog"
+            title="Delete articategorycle"
+            :message="destroyCategoryMessage"
+            :status="destroyCategoryStatus"
+            @destroy="destroyCategory">
+        </dialog-destroy>
+
+        <!-- Article dialogs -->
+
+        <dialog-edit
+            ref="createArticleDialog"
+            title="Create a new article"
+            :status="createStatus"
+            @save="create">
+
+            <div slot="body">
+                <article-form-create
+                    ref="createArticleForm"
+                    :item-org="createItem"
+                    :errors-org="createErrors">
+                </article-form-create>
+            </div>
+
+        </dialog-edit>
+
+        <dialog-destroy
+            ref="destroyArticleDialog"
+            title="Delete article"
+            :message="destroyMessage"
+            :status="destroyStatus"
+            @destroy="destroy">
+        </dialog-destroy>
 
     </div>
 </template>
 
 <script>
+
+    import inputText from 'vue-crud/src/inputs/InputText.vue'
+    import pagination from 'vue-crud/src/widgets/Pagination.vue'
+    import panel from 'vue-crud/src/widgets/Panel.vue'
+    import dialogEdit from 'vue-crud/src/widgets/DialogEdit.vue'
+    import dialogDestroy from 'vue-crud/src/widgets/DialogDestroy.vue'
+
+    import articleFormCreate from './ArticleFormCreate.vue'
+    import articleFormUpdate from './ArticleFormUpdate.vue'
+    import categoryForm from './CategoryForm.vue'
+
+    import mediaThumb from '../laravel-medias/MediaThumb.vue'
+
+    require('vue-crud/src/filters/FilterDate.js')
+
     export default {
+
+        components:{
+            inputText: inputText,
+            pagination: pagination,
+            panel: panel,
+            dialogEdit: dialogEdit,
+            dialogDestroy: dialogDestroy,
+
+            articleFormCreate: articleFormCreate,
+            articleFormUpdate: articleFormUpdate,
+            categoryForm: categoryForm,
+
+            mediaThumb: mediaThumb
+        },
+
         data(){
             return{
                 pagination: {},
                 page: 1,
                 search: {
                     text: '',
+                    categories: []
                 },
 
-                readStatus: false,
+                categories: [],
+
+                // ---
+
+                readCategoryStatus: null,
+                readCategoryErrors: null,
+
+                createCategoryItem: {
+                    title: null
+                },
+                createCategoryErrors: null,
+                createCategoryStatus: null,
+
+                updateCategoryItem: {},
+                updateCategoryErrors: null,
+                updateCategoryStatus: null,
+
+                destroyCategoryItem: {},
+                destroyCategoryErrors: null,
+                destroyCategoryStatus: null,
+
+                // ---
+
+                readStatus: null,
+                readErrors: null,
 
                 createItem: {
                     title: null
@@ -80,93 +384,203 @@ h1{
                 createErrors: null,
                 createStatus: null,
 
-                updateItem: {},
+                updateItem: null,
                 updateErrors: null,
                 updateStatus: null,
 
                 destroyItem: {},
-                destroyError: null,
+                destroyErrors: null,
                 destroyStatus: null,
             };
         },
 
+        watch: {
+            search: {
+                handler(){
+                    this.page = 1;
+                    this.read();
+                },
+                deep: true
+            },
+        },
+
         mounted() {
-            this.read();
+            this.readCategories().then(response => {
+
+                for(var i=0; i<response.data.length; ++i){
+                    this.search.categories.push(response.data[i].id);
+                }
+
+            });
+        },
+
+        computed: {
+            destroyMessage(){
+                return 'You are about to delete the article <strong>"' + this.destroyItem.title + '"</strong>.</p><p>This cannot be undone, so are you sure ?</p>';
+            },
+            destroyCategoryMessage(){
+                return 'You are about to delete the category <strong>"' + this.destroyCategoryItem.title + '"</strong>. All articles belonging to this category will still exist. </p><p>Are you sure ?</p>';
+            }
         },
 
         methods: {
 
-            read() {
-                
-                this.store.commit('setStatus', {
-                    status: 'pending', 
-                    message: 'Chargement des sociétés de gestion...'
-                });
+            readCategories(){
 
-                var url = '/admin/api/societe?page=' + this.page;
-                url += '&text=' + this.search.text;
+                this.readCategoryStatus = 'loading';
+
+                var url = '/api/blog-category';
                 
-                axios.get(url).then(response => {
+                var promise = axios.get(url);
+
+                promise.then(response => {
                     
-                    this.pagination = response.data;
-                    this.loaded = true;
-
-                    this.store.commit('setStatus', {
-                        status: 'success', 
-                        message: 'Sociétés de gestion chargées avec succès !'
-                    });
+                    this.readCategoryStatus = 'success';
+                    this.categories = response.data;
 
                 }).catch(response => {
                     
-                    this.store.commit('setStatus', {
-                        status: 'error', 
-                        message: response.response.data
-                    });
+                    this.readCategoryStatus = 'error';
+                    this.readCategoryErrors = response.response.data;
+
+                });
+
+                return promise;
+            },
+
+            openCategoryCreate(){
+                this.createCategoryItem.title = null;
+                this.createCategoryErrors = null;
+                this.createCategoryStatus = null;
+                this.$refs.createCategoryDialog.open();
+            },
+
+            createCategory(){
+
+                var item = this.$refs.createCategoryForm.item;
+                this.createCategoryStatus = 'loading';
+                
+                axios.post('/api/blog-category', item).then(response => {
+
+                    this.createCategoryStatus = 'success';
+                    this.$refs.createCategoryDialog.close();
+                    this.search.categories.push(response.data.id);
+                    this.readCategories();
+
+                }).catch(response => {
+                    
+                    this.createCategoryStatus = 'error';
+                    this.createCategoryErrors = response.response.data;
+
+                });
+
+            },
+
+            openCategoryDestroy(item){
+                
+                this.destroyCategoryItem = item;
+                this.destroyCategoryErrors = null;
+                this.destroyCategoryStatus = null;
+                this.$refs.destroyCategoryDialog.open();
+            },
+
+            destroyCategory() {
+
+                this.destroyCategoryStatus = 'loading';
+                
+                axios.delete('/api/blog-category/' + this.destroyCategoryItem.id).then(response => {
+
+                    this.destroyCategoryStatus = 'success';
+                    this.$refs.destroyCategoryDialog.close();
+
+                    var idx = this.search.categories.indexOf(this.destroyCategoryItem.id);
+                    if(idx !== -1){
+                        this.search.categories.splice(idx, 1);
+                    }
+
+                    this.readCategories();
+
+                }).catch(response => {
+
+                    this.destroyCategoryStatus = 'error';
+                    this.destroyCategoryErrors = response.data;
+
+                });
+
+            },
+
+            openCategoryUpdate(item){
+                
+                this.updateCategoryItem = item;
+                this.updateCategoryErrors = null;
+                this.updateCategoryStatus = null;
+                this.$refs.updateCategoryDialog.open();
+            },
+
+            updateCategory() {
+
+                var item = this.$refs.updateCategoryForm.item;
+                this.updateCategoryStatus = 'loading';
+                
+                axios.put('/api/blog-category/' + this.updateCategoryItem.id, item).then(response => {
+
+                    this.updateCategoryStatus = 'success';
+                    this.$refs.updateCategoryDialog.close();
+
+                    this.readCategories();
+
+                }).catch(response => {
+
+                    this.updateCategoryStatus = 'error';
+                    this.updateCategoryErrors = response.data;
+
+                });
+
+            },
+
+            read() {
+                
+                this.readStatus = 'loading';
+
+                var url = '/api/blog-article?page=' + this.page;
+                url += '&text=' + this.search.text;
+                url += '&categories=' + this.search.categories;
+                
+                axios.get(url).then(response => {
+                    
+                    this.readStatus = 'success';
+                    this.pagination = response.data;
+
+                }).catch(response => {
+                    
+                    this.readStatus = 'error';
+                    this.readErrors = response.response.data;
 
                 });
             },
 
             openCreate(){
-                this.createItem.name = null;
+                this.createItem.title = null;
                 this.createErrors = null;
                 this.createStatus = null;
-
-                $(this.$el).find('.modal-create').modal('show');
+                this.$refs.createArticleDialog.open();
             },
 
             create(){
 
-                var item = this.$refs.formSocieteCreate.item;
-                
-                this.store.commit('setStatus', {
-                    status: 'pending', 
-                    message: 'Création de la société de gestion...'
-                });
-
+                var item = this.$refs.createArticleForm.item;
                 this.createStatus = 'loading';
                 
-                axios.post('/admin/api/societe', item).then(response => {
+                axios.post('/api/blog-article', item).then(response => {
 
                     this.createStatus = 'success';
-
-                    $(this.$el).find('.modal-create').modal('hide');
-
+                    this.$refs.createArticleDialog.close();
                     this.read();
-
-                    this.store.commit('setStatus', {
-                        status: 'success', 
-                        message: 'Société de gestion créée avec succès !'
-                    });
 
                 }).catch(response => {
                     
                     this.createStatus = 'error';
                     this.createErrors = response.response.data;
-
-                    this.store.commit('setStatus', {
-                        status: 'error', 
-                        message: response.response.data
-                    });
 
                 });
             },
@@ -175,43 +589,22 @@ h1{
                 this.updateItem = item;
                 this.updateErrors = null;
                 this.updateStatus = null;
-
-                $(this.$el).find('.modal-update').modal('show');
             },
 
             update(){
 
-                var item = this.$refs.formSocieteUpdate.item;
-                
-                this.store.commit('setStatus', {
-                    status: 'pending', 
-                    message: 'Enregistrement de la société de gestion...'
-                });
-
+                var item = this.$refs.updateForm.item;
                 this.updateStatus = 'loading';
                 
-                axios.put('/admin/api/societe/' + item.id, item).then(response => {
+                axios.put('/api/blog-article/' + item.id, item).then(response => {
 
                     this.updateStatus = 'success';
-
-                    $(this.$el).find('.modal-update').modal('hide');
-
                     this.read();
-
-                    this.store.commit('setStatus', {
-                        status: 'success', 
-                        message: 'Société de gestion enregistrée avec succès !'
-                    });
 
                 }).catch(response => {
                     
                     this.updateStatus = 'error';
-                    this.updateErrors = response.response.data;
-
-                    this.store.commit('setStatus', {
-                        status: 'error', 
-                        message: response.response.data
-                    });
+                    this.updateErrors = response.data;
 
                 });
             },
@@ -219,102 +612,61 @@ h1{
             openDestroy(item){
                 
                 this.destroyItem = item;
-                this.destroyChecker = null;
-                this.destroyError = null;
+                this.destroyErrors = null;
                 this.destroyStatus = null;
-
-                $(this.$el).find('.modal-destroy').modal('show');
+                this.$refs.destroyArticleDialog.open();
             },
 
             destroy() {
 
-                if(this.destroyChecker != this.destroyItem.name){
-                    this.destroyError = "Le nom ne correspond pas";
-                    return;
-                }
-
-                this.store.commit('setStatus', {
-                    status: 'pending', 
-                    message: 'Suppression le la société de gestion ' + this.destroyItem.id
-                });
-
                 this.destroyStatus = 'loading';
                 
-                axios.delete('/admin/api/societe/' + this.destroyItem.id).then(response => {
-
-                    this.read();
+                axios.delete('/api/blog-article/' + this.destroyItem.id).then(response => {
 
                     this.destroyStatus = 'success';
-
-                    $(this.$el).find('.modal-destroy').modal('hide');
-
-                    this.store.commit('setStatus', {
-                        status: 'success', 
-                        message: 'Société de gestion supprimée avec succès !'
-                    });
+                    this.$refs.destroyArticleDialog.close();
+                    this.read();
 
                 }).catch(response => {
 
                     this.destroyStatus = 'error';
-                    this.destroyError = response.response.data;
-                    
-                    this.store.commit('setStatus', {
-                        status: 'error', 
-                        message: response.response.data
-                    });
+                    this.destroyErrors = response.data;
 
                 });
 
-            },
-
-            openScpi(item){
-                
-                this.createScpiItem.name = null;
-                this.createScpiItem.societe_id = item.id;
-                this.createScpiStatus = null;
-                this.createScpiErrors = null;
-                this.scpi = null;
-
-                $(this.$el).find('.modal-create-scpi').modal('show');
-            },
-
-            createScpi(){
-
-                this.store.commit('setStatus', {
-                    status: 'pending', 
-                    message: 'Création de la SCPI...'
-                });
-
-                this.createScpiStatus = 'loading';
-                
-                axios.post('/admin/api/scpi', this.createScpiItem).then(response => {
-
-                    this.createScpiStatus = 'success';
-                    this.scpi = response.data.id;
-                    this.read();
-
-                    this.store.commit('setStatus', {
-                        status: 'success', 
-                        message: 'SCPI créée avec succès !'
-                    });
-
-                }).catch(response => {
-                    
-                    this.createScpiStatus = 'error';
-                    this.createScpiErrors = response.response.data;
-
-                    this.store.commit('setStatus', {
-                        status: 'error', 
-                        message: response.response.data
-                    });
-
-                });
             },
 
             loadPage(p){
                 this.page = p;
                 this.read();
             },
+
+            hasCategory(id){
+                return (this.search.categories.indexOf(id) !== -1);
+            },
+
+            toggleCategory(id){
+                var idx = this.search.categories.indexOf(id);
+                if(idx !== -1){
+                    this.search.categories.splice(idx, 1);
+                }else{
+                    this.search.categories.push(id);
+                }
+            },
+
+            articleHasCategory(category){
+                var idx = _.findIndex(this.updateItem.categories, function(cat) { return cat.id == category.id; });
+                return (idx !== -1);
+            },
+
+            toggleCategoryForArticle(category){
+                var idx = _.findIndex(this.updateItem.categories, function(cat) { return cat.id == category.id; });
+                if(idx === -1){
+                    this.updateItem.categories.push(category);
+                }else{
+                    this.updateItem.categories.splice(idx, 1);
+                }
+            }
         }
     }
 </script>

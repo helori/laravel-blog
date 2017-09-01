@@ -14,10 +14,14 @@ class BlogCategoriesController extends Controller
 {
     public function read(Request $request, $id = null)
     {
-        if(is_null($id)){
-            return Category::findOrFail($id);
+        $query = Category::with(['articles' => function($query){
+            $query->select('id');
+        }]);
+
+        if(!is_null($id)){
+            return $query->findOrFail($id);
         }else{
-            return Category::orderBy('title')->get();
+            return $query->orderBy('title', 'asc')->get();
         }
     }
 
@@ -31,10 +35,10 @@ class BlogCategoriesController extends Controller
         return Category::create($request->all());
     }
 
-    public function update(Request $request, $id)
+    public function update(CategoryUpdateRequest $request, $id)
     {
         $item = Category::findOrFail($id);
-        $item->update($request->all());
+        $item->update($request->except(['articles']));
         $item->save();
         return $item;
     }

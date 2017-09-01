@@ -3,6 +3,7 @@
 namespace Helori\LaravelBlog\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 
 
 class BlogArticleUpdate extends FormRequest
@@ -34,5 +35,16 @@ class BlogArticleUpdate extends FormRequest
         return [
             
         ];
+    }
+
+    public function modifyInput()
+    {
+        $data = $this->all();
+
+        if(isset($data['title'])){
+            $data['slug'] = Str::slug($data['title'], '-');
+        }
+
+        $this->replace($data);
     }
 }

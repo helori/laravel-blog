@@ -14,28 +14,70 @@ class BlogArticlesController extends Controller
 {
     public function read(Request $request, $id = null)
     {
-        if(is_null($id)){
-            return Article::findOrFail($id);
+        $query = Article::with(['categories', 'images', 'image']);
+
+        if(!is_null($id)){
+
+            return $query->findOrFail($id);
+
         }else{
-            return Article::orderBy('title')->get();
+
+            $search = $request->input('text');
+
+            if($search){
+                $query->where(function($q) use($search) {
+                    $q->where('title', 'like', '%'.$search.'%')
+                        ->orWhere('preview', 'like', '%'.$search.'%')
+                        ->orWhere('content', 'like', '%'.$search.'%');
+                });
+            }
+
+            $categories = $request->input('categories', null);
+
+            if($categories !== null){
+                $categories = $categories ? explode(',', $categories) : [];
+                $query->whereHas('categories', function($q) use($categories) {
+                    $q->whereIn('id', $categories);
+                });
+            }
+
+            //$articles = BlogCategory::whereIn('id', $categories)
+
+            return $query->orderBy('created_at', 'desc')->paginate(5);
         }
     }
 
     public function delete(Request $request, $id)
     {
-        Article::destroy($id);
+        $item = Article::findOrFail($id);
+        $item->medias()->detach();
+        $item->delete();
     }
 
-    public function create(CategoryCreateRequest $request)
+    public function create(ArticleCreateRequest $request)
     {
+        $request->modifyInput();
+        
         return Article::create($request->all());
     }
 
-    public function update(Request $request, $id)
+    public function update(ArticleUpdateRequest $request, $id)
     {
+        $request->modifyInput();
+
         $item = Article::findOrFail($id);
-        $item->update($request->all());
+        $item->update($request->except(['categories', 'images', 'image']));
         $item->save();
-        return $item;
+
+        $categories = $request->input('categories');
+        $item->categories()->sync(array_pluck($categories, 'id'));
+
+        $medias = $request->input('image');
+        $item->syncMedias($medias, 'image');
+        
+        $medias = $request->input('images');
+        $item->syncMedias($medias, 'images');
+
+        return Article::with(['images', 'image'])->findOrFail($item->id);
     }
 }

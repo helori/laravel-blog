@@ -12,11 +12,11 @@ class CreateBlogArticlesTable extends Migration
             $table->increments('id');
             $table->timestamps();
 
+            $table->timestamp('published_at')->nullable()->default(null);
+            $table->boolean('published')->default(false);
+            
             $table->string('title')->nullable()->default(null);
             $table->string('slug')->nullable()->default(null);
-            $table->string('author')->nullable()->default(null);
-            $table->date('date')->nullable()->default(null);
-            $table->boolean('published')->default(false);
             $table->text('preview')->nullable();
             $table->text('content')->nullable();
         });
@@ -24,6 +24,6 @@ class CreateBlogArticlesTable extends Migration
 
     public function down()
     {
-        Schema::dropIfExists('blog_categories');
+        Schema::dropIfExists('blog_articles');
     }
 }

@@ -3,6 +3,7 @@
 namespace Helori\LaravelBlog\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 
 
 class BlogArticleCreate extends FormRequest
@@ -25,14 +26,25 @@ class BlogArticleCreate extends FormRequest
     public function rules()
     {
         return [
-            
+            'title' => 'required'
         ];
     }
 
     public function messages()
     {
         return [
-            
+            'title.required' => 'Your article must have a title'
         ];
+    }
+
+    public function modifyInput()
+    {
+        $data = $this->all();
+
+        if(isset($data['title'])){
+            $data['slug'] = Str::slug($data['title'], '-');
+        }
+
+        $this->replace($data);
     }
 }
