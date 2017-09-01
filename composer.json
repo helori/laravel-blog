@@ -27,5 +27,12 @@
     },
     "require-dev": {
         
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Helori\\LaravelBlog\\BlogServiceProvider"
+            ]
+        }
     }
 }
